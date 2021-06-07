@@ -28,11 +28,18 @@ let lpPairAbi = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"ad
 let lpPair = new ethers.Contract(lpPairAddress, lpPairAbi, walletWithProvider);
 lpPair = lpPair.connect(walletWithProvider);
 
-let pool = 1
+let pool = 1 //复投的池子id
 
 async function harvest() {
-    let tx = await master.deposit(pool, 0);
-    console.log('harvest: ' + tx.hash + '...')
+    let length = await master.poolLength();
+    for (var i = 1; i <= length.toNumber(); i++) {
+        let tx = await master.userInfo(i, walletWithProvider.address);
+        let amount = tx[0];
+        if (!amount.isZero()) {
+            let tx = await master.deposit(pool, 0);
+            console.log('harvest: ' + tx.hash + '...')
+        }
+    }
 }
 
 async function redeposit() {
@@ -84,8 +91,9 @@ async function harvestAndRedeposit() {
     await redeposit();
 }
 
-let job = schedule.scheduleJob('0 * * * * *', () => {
+let job = schedule.scheduleJob('0 */2 * * * *', () => {
     console.log(new Date() + ': job run...')
     harvestAndRedeposit();
 })
+
 
